@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>B777F Oversize Acceptance Planner</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-labelledby="app-title">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">B777F main deck</p>
+            <h1 id="app-title">Oversize Acceptance Planner</h1>
+          </div>
+          <div class="status-pill" id="overallStatus">Ready</div>
+        </header>
+
+        <form class="planner" id="plannerForm">
+          <section class="input-panel" aria-label="Cargo inputs">
+            <div class="panel-head">
+              <h2>Cargo</h2>
+              <div class="panel-actions">
+                <button class="ghost-button" id="resetPlanner" type="button">Reset</button>
+                <div class="segmented" role="group" aria-label="Units">
+                  <input type="radio" name="units" id="unitCm" value="cm" checked>
+                  <label for="unitCm">cm</label>
+                  <input type="radio" name="units" id="unitIn" value="in">
+                  <label for="unitIn">in</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-grid">
+              <label>
+                <span>Length</span>
+                <input id="length" type="number" min="0" step="0.1" value="318">
+              </label>
+              <label>
+                <span>Width</span>
+                <input id="width" type="number" min="0" step="0.1" value="186">
+              </label>
+              <label>
+                <span>Height</span>
+                <input id="height" type="number" min="0" step="0.1" value="180">
+              </label>
+              <label>
+                <span>Weight kg</span>
+                <input id="weight" type="number" min="0" step="1" value="14720">
+              </label>
+              <label>
+                <span>Pieces</span>
+                <input id="pieces" type="number" min="1" step="1" value="1">
+              </label>
+            </div>
+
+            <div class="panel-head secondary">
+              <h2>Build</h2>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>Special item</span>
+                <select id="specialItem"></select>
+              </label>
+              <label>
+                <span>Base pallet</span>
+                <select id="pallet">
+                  <option value="auto" selected>Auto</option>
+                  <option value="125x96">PMC - 125 x 96</option>
+                  <option value="125x88">PAJ - 88 x 125</option>
+                  <option value="16ft">PRA - 16 ft</option>
+                  <option value="20ft">PGE - 20 ft</option>
+                </select>
+              </label>
+              <label>
+                <span>Position zone</span>
+                <select id="zone"></select>
+              </label>
+              <label>
+                <span>Deck lane</span>
+                <select id="deckLane">
+                  <option value="auto" selected>Auto</option>
+                  <option value="right">Right</option>
+                  <option value="left">Left</option>
+                  <option value="center">Centre</option>
+                </select>
+              </label>
+              <label>
+                <span>Loading</span>
+                <select id="loadMode">
+                  <option value="auto" selected>Auto</option>
+                  <option value="sbs">Side by side</option>
+                  <option value="center">Centre load</option>
+                </select>
+              </label>
+              <label>
+                <span>Shoring</span>
+                <select id="extraLayer">
+                  <option value="auto" selected>Auto</option>
+                  <option value="2">+2 in</option>
+                  <option value="4">+4 in</option>
+                </select>
+              </label>
+              <label class="custom-rule">
+                <span>Minimum positions</span>
+                <input id="customMinPositions" type="number" min="0" step="1" value="0">
+              </label>
+              <label class="custom-rule">
+                <span>Required loading</span>
+                <select id="customRequiredMode">
+                  <option value="none" selected>No override</option>
+                  <option value="sbs">Side by side</option>
+                  <option value="center">Centre load</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="result-panel" aria-live="polite">
+            <div class="result-head">
+              <div>
+                <p class="eyebrow">Result</p>
+                <h2 id="decisionTitle">Enter cargo details</h2>
+              </div>
+              <div class="decision-badge" id="decisionBadge">Pending</div>
+            </div>
+
+            <div class="metrics">
+              <div>
+                <span>Positions</span>
+                <strong id="positionsNeeded">-</strong>
+              </div>
+              <div>
+                <span>Securing</span>
+                <strong id="securing">-</strong>
+              </div>
+              <div>
+                <span>Built height</span>
+                <strong id="builtHeight">-</strong>
+              </div>
+              <div>
+                <span>Built weight</span>
+                <strong id="builtWeight">-</strong>
+              </div>
+              <div>
+                <span>Floor limit</span>
+                <strong id="floorLimit">-</strong>
+              </div>
+              <div>
+                <span>Special rule</span>
+                <strong id="specialRule">-</strong>
+              </div>
+              <div>
+                <span>Shoring beams</span>
+                <strong id="beamCount">-</strong>
+              </div>
+            </div>
+
+            <div class="checks" id="checks"></div>
+          </section>
+        </form>
+
+        <section class="details">
+          <div class="detail-block">
+            <h2>Build Plan</h2>
+            <ol id="buildPlan"></ol>
+          </div>
+          <div class="detail-block">
+            <h2>Load Data</h2>
+            <dl class="data-list" id="dataList"></dl>
+          </div>
+        </section>
+
+        <section class="visuals" aria-label="Load and shoring diagrams">
+          <div class="detail-block visual-block">
+            <h2>Main Deck Hold Image</h2>
+            <div class="diagram" id="deckDiagram"></div>
+          </div>
+          <div class="detail-block visual-block contour-block">
+            <h2>Hold Contour Image</h2>
+            <div class="diagram" id="contourDiagram"></div>
+          </div>
+          <div class="detail-block visual-block">
+            <h2>Shoring Image</h2>
+            <div class="diagram" id="shoringDiagram"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
