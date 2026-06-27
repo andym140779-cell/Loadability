@@ -1129,31 +1129,31 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
     const stationLengthIn = 125;
     const stationSpanIn = Math.max(stationLengthIn, visualSpan * stationLengthIn);
     const scaleX = (selectedW - 10) / stationSpanIn;
-    const palletW = Math.min(selectedW - 10, Math.max(28, pallet.length * scaleX));
-    const palletX = selectedX + selectedW - 5 - palletW;
-    const usableInset = Math.max(0, (pallet.length - (pallet.usableLength || pallet.length)) / 2) * scaleX;
-    const usableX = palletX + usableInset;
-    const usableW = Math.max(8, (pallet.usableLength || pallet.length) * scaleX);
+    const laneWidthIn = deckLane === "center" ? 192 : 96;
+    const scaleY = (rowH - 16) / laneWidthIn;
+    const palletW = selectedW - 10;
+    const palletX = selectedX + 5;
+    const overhangW = shoring.forwardOverhang?.applies
+      ? Math.max(0, shoring.forwardOverhang.overhangIn * scaleX)
+      : 0;
     const itemW = Math.max(16, input.lengthIn * scaleX);
+    const palletH = Math.min(rowH - 16, Math.max(18, pallet.width * scaleY));
+    const itemH = Math.max(14, Math.min(rowH - 10, input.widthIn * scaleY));
     const itemX = shoring.forwardOverhang?.applies
-      ? (usableX + usableW) - itemW
+      ? palletX - overhangW
       : palletX + (palletW - Math.min(itemW, palletW)) / 2;
     const itemDrawX = Math.max(x0 + 2, itemX);
     const itemDrawW = Math.min(itemX + itemW, rX + rW - 2) - itemDrawX;
     const overhangX = Math.max(x0 + 2, itemX);
-    const overhangW = Math.max(0, Math.min(palletX, rX + rW - 2) - overhangX);
+    const overhangDrawW = Math.max(0, Math.min(palletX, rX + rW - 2) - overhangX);
     const previousPosition = lanePositions[startIndex - 1];
     const vacantX = previousPosition ? cellX(previousPosition) : null;
     const vacantW = previousPosition ? cellWidth(previousPosition) : null;
-    const palletY = targetY + rowH - 30;
-    const palletH = 18;
-    const usableY = palletY + 4;
-    const usableH = palletH - 8;
-    const itemY = targetY + 14;
-    const itemH = rowH - 50;
+    const palletY = targetY + (rowH - palletH) / 2;
+    const itemY = palletY + (palletH - itemH) / 2;
     const overhangFill = shoring.forwardOverhang.allowed ? "#fff3cf" : "#fde7e5";
     const overhangStroke = shoring.forwardOverhang.allowed ? "#b7791f" : "#b42318";
-    const hatchLines = Array.from({ length: Math.ceil(overhangW / 10) + 2 }, (_, index) => {
+    const hatchLines = Array.from({ length: Math.ceil(overhangDrawW / 10) + 2 }, (_, index) => {
       const x = overhangX - itemH + (index * 10);
       return `<line x1="${x}" y1="${itemY + itemH}" x2="${x + itemH}" y2="${itemY}" stroke="${overhangStroke}" stroke-width="1" opacity="0.5"/>`;
     }).join("");
@@ -1161,29 +1161,29 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
       <rect x="${vacantX + 4}" y="${targetY + 5}" width="${vacantW - 8}" height="${rowH - 10}" fill="#fff8e6" stroke="#b7791f" stroke-width="1.5" stroke-dasharray="6 5"/>
       <text x="${vacantX + vacantW / 2}" y="${targetY + rowH - 12}" text-anchor="middle" fill="#8a4f08" font-family="Arial" font-size="11" font-weight="700">FWD SPACE</text>
     ` : "";
-    const overhangOverlay = shoring.forwardOverhang?.applies && overhangW > 0 ? `
-      <clipPath id="overhangClip-${targetLaneLabel}"><rect x="${overhangX}" y="${itemY}" width="${overhangW}" height="${itemH}"/></clipPath>
-      <rect x="${overhangX}" y="${itemY}" width="${overhangW}" height="${itemH}" fill="${overhangFill}" stroke="${overhangStroke}" stroke-width="2" stroke-dasharray="7 4"/>
+    const overhangOverlay = shoring.forwardOverhang?.applies && overhangDrawW > 0 ? `
+      <clipPath id="overhangClip-${targetLaneLabel}"><rect x="${overhangX}" y="${itemY}" width="${overhangDrawW}" height="${itemH}"/></clipPath>
+      <rect x="${overhangX}" y="${itemY}" width="${overhangDrawW}" height="${itemH}" fill="${overhangFill}" stroke="${overhangStroke}" stroke-width="2" stroke-dasharray="7 4"/>
       <g clip-path="url(#overhangClip-${targetLaneLabel})">${hatchLines}</g>
-      <line x1="${overhangX + overhangW / 2}" y1="${itemY - 2}" x2="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y2="${targetY + 22}" stroke="${overhangStroke}" stroke-width="1.5"/>
-      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y="${targetY + 23}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="11" font-weight="700">FWD O/H</text>
-      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y="${targetY + 39}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="10">${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}</text>
+      <line x1="${overhangX + overhangDrawW / 2}" y1="${itemY - 2}" x2="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y2="${targetY + 22}" stroke="${overhangStroke}" stroke-width="1.5"/>
+      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y="${targetY + 23}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="18" font-weight="500">OHG</text>
+      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y="${targetY + 39}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="10">${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}</text>
     ` : "";
     const itemTextX = Math.max(selectedX + 38, Math.min(selectedX + selectedW - 38, itemDrawX + itemDrawW / 2));
     const itemLabel = `${pallet.code} - ${input.pieces} pc`;
+    const palletLabelSize = palletW > 150 ? 24 : 18;
 
     return `
       <g>
         ${reserveOverlay(targetY)}
         ${vacantOverlay}
-        <rect x="${palletX}" y="${palletY}" width="${palletW}" height="${palletH}" fill="#c49a6c" stroke="#7c552c" stroke-width="2"/>
-        <rect x="${usableX}" y="${usableY}" width="${usableW}" height="${usableH}" fill="#ead6bd" stroke="#9b7247" stroke-width="1"/>
-        <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="${itemColor}" stroke="${itemStroke}" stroke-width="2"/>
+        <rect x="${palletX}" y="${palletY}" width="${palletW}" height="${palletH}" fill="#92d050" stroke="#111" stroke-width="2"/>
+        <text x="${palletX + palletW / 2}" y="${palletY + Math.max(28, palletH / 2 - 4)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="${palletLabelSize}" font-weight="500">${pallet.code}</text>
+        <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="#dff2e6" fill-opacity="0.95" stroke="${itemStroke}" stroke-width="2.4"/>
         ${overhangOverlay}
         <text x="${itemTextX}" y="${itemY - 6}" text-anchor="middle" fill="#34444d" font-family="Arial" font-size="10">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
-        <text x="${itemTextX}" y="${itemY + 23}" text-anchor="middle" fill="#000" font-family="Arial" font-size="15" font-weight="700">${itemLabel}</text>
-        <text x="${itemTextX}" y="${itemY + 44}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
-        <text x="${palletX + palletW / 2}" y="${palletY + 13}" text-anchor="middle" fill="#4a321c" font-family="Arial" font-size="11" font-weight="700">${pallet.code} PALLET TO SCALE</text>
+        <text x="${itemTextX}" y="${itemY + Math.max(17, itemH / 2 - 5)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="14" font-weight="700">${itemLabel}</text>
+        <text x="${itemTextX}" y="${itemY + Math.max(34, itemH / 2 + 12)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
       </g>
     `;
   };
