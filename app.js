@@ -1172,6 +1172,13 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
     const itemTextX = Math.max(selectedX + 38, Math.min(selectedX + selectedW - 38, itemDrawX + itemDrawW / 2));
     const itemLabel = `${pallet.code} - ${input.pieces} pc`;
     const palletLabelSize = palletW > 150 ? 24 : 18;
+    const itemOverlay = shoring.forwardOverhang?.applies ? `
+      <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="#dff2e6" fill-opacity="0.95" stroke="${itemStroke}" stroke-width="2.4"/>
+      ${overhangOverlay}
+      <text x="${itemTextX}" y="${itemY - 6}" text-anchor="middle" fill="#34444d" font-family="Arial" font-size="10">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
+      <text x="${itemTextX}" y="${itemY + Math.max(17, itemH / 2 - 5)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="14" font-weight="700">${itemLabel}</text>
+      <text x="${itemTextX}" y="${itemY + Math.max(34, itemH / 2 + 12)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
+    ` : "";
 
     return `
       <g>
@@ -1179,11 +1186,7 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
         ${vacantOverlay}
         <rect x="${palletX}" y="${palletY}" width="${palletW}" height="${palletH}" fill="#92d050" stroke="#111" stroke-width="2"/>
         <text x="${palletX + palletW / 2}" y="${palletY + Math.max(28, palletH / 2 - 4)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="${palletLabelSize}" font-weight="500">${pallet.code}</text>
-        <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="#dff2e6" fill-opacity="0.95" stroke="${itemStroke}" stroke-width="2.4"/>
-        ${overhangOverlay}
-        <text x="${itemTextX}" y="${itemY - 6}" text-anchor="middle" fill="#34444d" font-family="Arial" font-size="10">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
-        <text x="${itemTextX}" y="${itemY + Math.max(17, itemH / 2 - 5)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="14" font-weight="700">${itemLabel}</text>
-        <text x="${itemTextX}" y="${itemY + Math.max(34, itemH / 2 + 12)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
+        ${itemOverlay}
       </g>
     `;
   };
