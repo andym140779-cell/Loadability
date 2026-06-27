@@ -1150,7 +1150,11 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
     const vacantX = previousPosition ? cellX(previousPosition) : null;
     const vacantW = previousPosition ? cellWidth(previousPosition) : null;
     const palletY = targetY + (rowH - palletH) / 2;
-    const itemY = palletY + (palletH - itemH) / 2;
+    const itemY = shoring.forwardOverhang?.applies && deckLane === "left"
+      ? palletY + palletH - itemH
+      : shoring.forwardOverhang?.applies && deckLane === "right"
+        ? palletY
+        : palletY + (palletH - itemH) / 2;
     const overhangFill = shoring.forwardOverhang.allowed ? "#fff3cf" : "#fde7e5";
     const overhangStroke = shoring.forwardOverhang.allowed ? "#b7791f" : "#b42318";
     const hatchLines = Array.from({ length: Math.ceil(overhangDrawW / 10) + 2 }, (_, index) => {
@@ -1167,14 +1171,18 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
       <g clip-path="url(#overhangClip-${targetLaneLabel})">${hatchLines}</g>
       <line x1="${overhangX + overhangDrawW / 2}" y1="${itemY - 2}" x2="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y2="${targetY + 22}" stroke="${overhangStroke}" stroke-width="1.5"/>
       <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y="${targetY + 23}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="18" font-weight="500">OHG</text>
-      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangDrawW / 2}" y="${targetY + 39}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="10">${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}</text>
     ` : "";
     const itemTextX = Math.max(selectedX + 38, Math.min(selectedX + selectedW - 38, itemDrawX + itemDrawW / 2));
     const itemLabel = `${pallet.code} - ${input.pieces} pc`;
     const palletLabelSize = palletW > 150 ? 24 : 18;
+    const sideBuildMarker = shoring.forwardOverhang?.applies ? `
+      <line x1="${itemDrawX + 6}" y1="${deckLane === "right" ? itemY + 6 : itemY + itemH - 6}" x2="${itemDrawX + Math.max(8, itemDrawW) - 6}" y2="${deckLane === "right" ? itemY + 6 : itemY + itemH - 6}" stroke="#0f5f3d" stroke-width="3"/>
+      <text x="${itemTextX}" y="${deckLane === "right" ? itemY + 20 : itemY + itemH - 11}" text-anchor="middle" fill="#0f5f3d" font-family="Arial" font-size="10" font-weight="700">${deckLane === "right" ? "RIGHT SIDE BUILD" : "LEFT SIDE BUILD"}</text>
+    ` : "";
     const itemOverlay = shoring.forwardOverhang?.applies ? `
       <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="#dff2e6" fill-opacity="0.95" stroke="${itemStroke}" stroke-width="2.4"/>
       ${overhangOverlay}
+      ${sideBuildMarker}
       <text x="${itemTextX}" y="${itemY - 6}" text-anchor="middle" fill="#34444d" font-family="Arial" font-size="10">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
       <text x="${itemTextX}" y="${itemY + Math.max(17, itemH / 2 - 5)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="14" font-weight="700">${itemLabel}</text>
       <text x="${itemTextX}" y="${itemY + Math.max(34, itemH / 2 + 12)}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
