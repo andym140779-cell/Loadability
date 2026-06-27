@@ -1125,44 +1125,68 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
     <rect x="${reserveX}" y="${targetY + 4}" width="${reserveW}" height="${rowH - 8}" fill="#dfeaff" stroke="#3a66b7" stroke-width="2" stroke-dasharray="8 5" opacity="0.75"/>
     <text x="${reserveX + reserveW / 2}" y="${targetY + rowH - 12}" text-anchor="middle" fill="#254b92" font-family="Arial" font-size="12" font-weight="700">RESERVE ${requiredPositions} POSITIONS</text>
   ` : "";
-  const overhangOverlay = (targetY) => {
-    if (!shoring.forwardOverhang?.applies) return "";
-    const usable = pallet.usableLength || pallet.length || 1;
-    const rawW = selectedW * (shoring.forwardOverhang.overhangIn / usable);
-    const desiredW = Math.min(Math.max(24, rawW), Math.max(34, selectedW * 0.58));
-    const overhangX = Math.max(x0 + 2, selectedX + 5 - desiredW);
-    const overhangW = Math.max(18, selectedX + 5 - overhangX);
-    const overhangY = targetY + 9;
-    const overhangH = rowH - 18;
+  const drawLoadOverlay = (targetY, targetLaneLabel) => {
+    const stationLengthIn = 125;
+    const stationSpanIn = Math.max(stationLengthIn, visualSpan * stationLengthIn);
+    const scaleX = (selectedW - 10) / stationSpanIn;
+    const palletW = Math.min(selectedW - 10, Math.max(28, pallet.length * scaleX));
+    const palletX = selectedX + selectedW - 5 - palletW;
+    const usableInset = Math.max(0, (pallet.length - (pallet.usableLength || pallet.length)) / 2) * scaleX;
+    const usableX = palletX + usableInset;
+    const usableW = Math.max(8, (pallet.usableLength || pallet.length) * scaleX);
+    const itemW = Math.max(16, input.lengthIn * scaleX);
+    const itemX = shoring.forwardOverhang?.applies
+      ? (usableX + usableW) - itemW
+      : palletX + (palletW - Math.min(itemW, palletW)) / 2;
+    const itemDrawX = Math.max(x0 + 2, itemX);
+    const itemDrawW = Math.min(itemX + itemW, rX + rW - 2) - itemDrawX;
+    const overhangX = Math.max(x0 + 2, itemX);
+    const overhangW = Math.max(0, Math.min(palletX, rX + rW - 2) - overhangX);
+    const previousPosition = lanePositions[startIndex - 1];
+    const vacantX = previousPosition ? cellX(previousPosition) : null;
+    const vacantW = previousPosition ? cellWidth(previousPosition) : null;
+    const palletY = targetY + rowH - 30;
+    const palletH = 18;
+    const usableY = palletY + 4;
+    const usableH = palletH - 8;
+    const itemY = targetY + 14;
+    const itemH = rowH - 50;
     const overhangFill = shoring.forwardOverhang.allowed ? "#fff3cf" : "#fde7e5";
     const overhangStroke = shoring.forwardOverhang.allowed ? "#b7791f" : "#b42318";
     const hatchLines = Array.from({ length: Math.ceil(overhangW / 10) + 2 }, (_, index) => {
-      const x = overhangX - overhangH + (index * 10);
-      return `<line x1="${x}" y1="${overhangY + overhangH}" x2="${x + overhangH}" y2="${overhangY}" stroke="${overhangStroke}" stroke-width="1" opacity="0.5"/>`;
+      const x = overhangX - itemH + (index * 10);
+      return `<line x1="${x}" y1="${itemY + itemH}" x2="${x + itemH}" y2="${itemY}" stroke="${overhangStroke}" stroke-width="1" opacity="0.5"/>`;
     }).join("");
+    const vacantOverlay = shoring.forwardOverhang?.applies && vacantX !== null ? `
+      <rect x="${vacantX + 4}" y="${targetY + 5}" width="${vacantW - 8}" height="${rowH - 10}" fill="#fff8e6" stroke="#b7791f" stroke-width="1.5" stroke-dasharray="6 5"/>
+      <text x="${vacantX + vacantW / 2}" y="${targetY + rowH - 12}" text-anchor="middle" fill="#8a4f08" font-family="Arial" font-size="11" font-weight="700">FWD SPACE</text>
+    ` : "";
+    const overhangOverlay = shoring.forwardOverhang?.applies && overhangW > 0 ? `
+      <clipPath id="overhangClip-${targetLaneLabel}"><rect x="${overhangX}" y="${itemY}" width="${overhangW}" height="${itemH}"/></clipPath>
+      <rect x="${overhangX}" y="${itemY}" width="${overhangW}" height="${itemH}" fill="${overhangFill}" stroke="${overhangStroke}" stroke-width="2" stroke-dasharray="7 4"/>
+      <g clip-path="url(#overhangClip-${targetLaneLabel})">${hatchLines}</g>
+      <line x1="${overhangX + overhangW / 2}" y1="${itemY - 2}" x2="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y2="${targetY + 22}" stroke="${overhangStroke}" stroke-width="1.5"/>
+      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y="${targetY + 23}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="11" font-weight="700">FWD O/H</text>
+      <text x="${vacantX !== null ? vacantX + vacantW / 2 : overhangX + overhangW / 2}" y="${targetY + 39}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="10">${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}</text>
+    ` : "";
+    const itemTextX = Math.max(selectedX + 38, Math.min(selectedX + selectedW - 38, itemDrawX + itemDrawW / 2));
+    const itemLabel = `${pallet.code} - ${input.pieces} pc`;
 
     return `
       <g>
-        <rect x="${overhangX}" y="${overhangY}" width="${overhangW}" height="${overhangH}" fill="${overhangFill}" stroke="${overhangStroke}" stroke-width="2" stroke-dasharray="7 4"/>
-        <clipPath id="overhangClip"><rect x="${overhangX}" y="${overhangY}" width="${overhangW}" height="${overhangH}"/></clipPath>
-        <g clip-path="url(#overhangClip)">${hatchLines}</g>
-        <line x1="${overhangX + overhangW - 6}" y1="${overhangY - 8}" x2="${overhangX + 8}" y2="${overhangY - 8}" stroke="${overhangStroke}" stroke-width="2"/>
-        <path d="M ${overhangX + 8} ${overhangY - 8} l 9 -5 v 10 z" fill="${overhangStroke}"/>
-        <text x="${overhangX + overhangW / 2}" y="${overhangY + 28}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="12" font-weight="700">FWD OVERHANG</text>
-        <text x="${overhangX + overhangW / 2}" y="${overhangY + 48}" text-anchor="middle" fill="${overhangStroke}" font-family="Arial" font-size="11">${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}</text>
+        ${reserveOverlay(targetY)}
+        ${vacantOverlay}
+        <rect x="${palletX}" y="${palletY}" width="${palletW}" height="${palletH}" fill="#c49a6c" stroke="#7c552c" stroke-width="2"/>
+        <rect x="${usableX}" y="${usableY}" width="${usableW}" height="${usableH}" fill="#ead6bd" stroke="#9b7247" stroke-width="1"/>
+        <rect x="${itemDrawX}" y="${itemY}" width="${Math.max(8, itemDrawW)}" height="${itemH}" fill="${itemColor}" stroke="${itemStroke}" stroke-width="2"/>
+        ${overhangOverlay}
+        <text x="${itemTextX}" y="${itemY - 6}" text-anchor="middle" fill="#34444d" font-family="Arial" font-size="10">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
+        <text x="${itemTextX}" y="${itemY + 23}" text-anchor="middle" fill="#000" font-family="Arial" font-size="15" font-weight="700">${itemLabel}</text>
+        <text x="${itemTextX}" y="${itemY + 44}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
+        <text x="${palletX + palletW / 2}" y="${palletY + 13}" text-anchor="middle" fill="#4a321c" font-family="Arial" font-size="11" font-weight="700">${pallet.code} PALLET TO SCALE</text>
       </g>
     `;
   };
-  const drawLoadOverlay = (targetY, targetLaneLabel) => `
-    <g>
-      ${reserveOverlay(targetY)}
-      ${overhangOverlay(targetY)}
-      <rect x="${selectedX + 5}" y="${targetY + 9}" width="${selectedW - 10}" height="${rowH - 18}" fill="${itemColor}" stroke="${itemStroke}" stroke-width="2"/>
-      <text x="${selectedX + selectedW / 2}" y="${targetY + 34}" text-anchor="middle" fill="#000" font-family="Arial" font-size="16" font-weight="700">${pallet.code} - ${input.pieces} pc</text>
-      <text x="${selectedX + selectedW / 2}" y="${targetY + 56}" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="700">${targetLaneLabel} ${input.zone}</text>
-      <text x="${selectedX + selectedW / 2}" y="${targetY + 76}" text-anchor="middle" fill="#000" font-family="Arial" font-size="11">${fmt(input.lengthIn, 1, " in")} x ${fmt(input.widthIn, 1, " in")} x ${fmt(shoring.builtHeight, 1, " in")}</text>
-    </g>
-  `;
   const loadOverlay = drawLoadOverlay(rowY, laneLabel);
 
   return `
@@ -1178,7 +1202,7 @@ function buildDeckDiagram(input, pallet, mode, requiredPositions, zoneGroup, cap
       ${drawLabelCells(yCenter, "C")}
       ${drawBodyCells(centerBodyY, centerBodyH)}
       ${loadOverlay}
-      <text x="8" y="304" class="svg-small">${pallet.code} visual span: ${visualSpan} position${visualSpan === 1 ? "" : "s"} | selected lane ${laneLabel} | required ${requiredPositions} position${requiredPositions === 1 ? "" : "s"}</text>
+      <text x="8" y="304" class="svg-small">${pallet.code} visual span: ${visualSpan} position${visualSpan === 1 ? "" : "s"} | selected lane ${laneLabel} | required ${requiredPositions} position${requiredPositions === 1 ? "" : "s"}${shoring.forwardOverhang?.applies ? ` | forward overhang ${fmt(shoring.forwardOverhang.overhangIn, 1, " in")} / ${fmt(shoring.forwardOverhang.overhangIn * 2.54, 0, " cm")}` : ""}</text>
     </svg>
   `;
 }
@@ -1227,28 +1251,44 @@ function buildHoldContourDiagram(input, pallet, shoring, mode, contour) {
   const qrgEngineEnvelope = Boolean(isEngine && input.specialRule.qrgPositions);
   const itemWidth = input.widthIn;
   const builtHeight = shoring.builtHeight;
-  const baseWidth = Math.max(192, itemWidth * 1.18);
-  const sideWidth = baseWidth / 2;
-  const profileHeightLimit = qrgEngineEnvelope ? Math.max(118, shoring.builtHeight * 1.08) : 118;
   const supportHeight = Math.max(0, shoring.thickness + shoring.palletHeight + input.extraLayer);
   const cargoHeight = Math.max(0, input.heightIn);
-  const maxDrawWidth = Math.max(baseWidth, itemWidth + sideWidth, itemWidth * 1.3, 1);
-  const maxDrawHeight = Math.max(profileHeightLimit, builtHeight, 1);
-  const canvasW = 920;
-  const canvasH = 420;
-  const plotW = 650;
-  const plotH = 265;
-  const scale = Math.min(plotW / (maxDrawWidth * 1.12), plotH / (maxDrawHeight * 1.18));
-  const centerX = 500;
-  const baseY = 330;
-  const profileW = baseWidth * scale;
+  const deckWidthIn = 192;
+  const sideWidthIn = deckWidthIn / 2;
+  const profileHeightLimit = contour.maxHeight || 118;
+  const maxDrawHeight = Math.max(profileHeightLimit, builtHeight, 118);
+  const canvasW = 960;
+  const canvasH = 450;
+  const plotW = 690;
+  const plotH = 285;
+  const scale = Math.min(plotW / (deckWidthIn * 1.16), plotH / (maxDrawHeight * 1.16));
+  const centerX = 540;
+  const baseY = 340;
+  const deckW = deckWidthIn * scale;
+  const deckLeft = centerX - deckW / 2;
+  const deckRight = centerX + deckW / 2;
+  const sideW = sideWidthIn * scale;
   const profileH = profileHeightLimit * scale;
-  const x0 = centerX - profileW / 2;
-  const x1 = centerX + profileW / 2;
   const topY = baseY - profileH;
-  const outerY = topY - 24;
-  const outerPath = `M ${x0 - 18} ${baseY} C ${x0 - 18} ${baseY - profileH * 0.65}, ${centerX - profileW * 0.33} ${outerY}, ${centerX} ${outerY} C ${centerX + profileW * 0.33} ${outerY}, ${x1 + 18} ${baseY - profileH * 0.65}, ${x1 + 18} ${baseY}`;
-  const aircraftPath = `${outerPath} L ${x1 + 18} ${baseY} L ${x0 - 18} ${baseY} Z`;
+  const shellTopY = topY - Math.max(28, profileH * 0.1);
+  const shoulderY = baseY - profileH * 0.72;
+  const topHalf = Math.min(deckW * 0.36, Math.max(42, (contour.topWidth || 48) * scale));
+  const aircraftPath = [
+    `M ${deckLeft - 28} ${baseY}`,
+    `C ${deckLeft - 26} ${shoulderY}, ${centerX - deckW * 0.36} ${shellTopY}, ${centerX} ${shellTopY}`,
+    `C ${centerX + deckW * 0.36} ${shellTopY}, ${deckRight + 26} ${shoulderY}, ${deckRight + 28} ${baseY}`,
+    `L ${deckLeft - 28} ${baseY}`,
+    "Z",
+  ].join(" ");
+  const usablePath = [
+    `M ${deckLeft} ${baseY}`,
+    `L ${deckLeft} ${baseY - profileH * 0.58}`,
+    `L ${centerX - topHalf} ${topY}`,
+    `L ${centerX + topHalf} ${topY}`,
+    `L ${deckRight} ${baseY - profileH * 0.58}`,
+    `L ${deckRight} ${baseY}`,
+    "Z",
+  ].join(" ");
   const itemW = itemWidth * scale;
   const itemH = builtHeight * scale;
   const supportH = supportHeight * scale;
@@ -1256,8 +1296,8 @@ function buildHoldContourDiagram(input, pallet, shoring, mode, contour) {
   const itemCenterX = centerLoad
     ? centerX
     : deckLane === "left"
-      ? centerX - sideWidth * scale / 2
-      : centerX + sideWidth * scale / 2;
+      ? deckLeft + sideW / 2
+      : deckRight - sideW / 2;
   const itemX = itemCenterX - itemW / 2;
   const itemY = baseY - itemH;
   const supportY = baseY - supportH;
@@ -1266,6 +1306,14 @@ function buildHoldContourDiagram(input, pallet, shoring, mode, contour) {
   const visualFits = qrgEngineEnvelope || contour.fits;
   const fitColor = visualFits ? "#177245" : "#b42318";
   const itemFill = visualFits ? "#dff2e6" : "#fde7e5";
+  const selectedLaneX = centerLoad ? itemCenterX - Math.max(itemW, sideW) / 2 : deckLane === "left" ? deckLeft : deckRight - sideW;
+  const selectedLaneW = centerLoad ? Math.max(itemW, sideW) : sideW;
+  const selectedLaneLabel = centerLoad ? "CENTRE" : deckLane.toUpperCase();
+  const baseBandY = baseY - Math.max(10, Math.min(18, 8 * scale));
+  const baseBandH = baseY - baseBandY;
+  const dimensionX = Math.min(canvasW - 58, itemX + itemW + 28);
+  const topDimensionY = Math.max(48, itemY - 20);
+  const deckDimensionY = baseY + 72;
   const supportLayer = supportH > 0 ? `
     <rect x="${itemX}" y="${supportY}" width="${itemW}" height="${supportH}" fill="#b8874f" stroke="#7c552c" stroke-width="1.4"/>
     <text x="${itemCenterX}" y="${supportY + Math.max(12, supportH / 2 + 4)}" text-anchor="middle" fill="#ffffff" font-family="Arial" font-size="11" font-weight="700">BASE / SHORING</text>
@@ -1285,18 +1333,30 @@ function buildHoldContourDiagram(input, pallet, shoring, mode, contour) {
       <text x="${itemCenterX}" y="${cargoY + Math.max(18, cargoDrawH / 2)}" text-anchor="middle" fill="#172026" font-family="Arial" font-size="15" font-weight="700">ITEM</text>
     `;
   const itemDimensionLayer = `
-    <text x="${itemCenterX}" y="${Math.max(22, itemY - 10)}" text-anchor="middle" class="svg-small">${fmt(itemWidth, 1, " in")} item width</text>
-    <text x="${Math.min(canvasW - 32, itemX + itemW + 18)}" y="${itemY + Math.max(16, itemH / 2)}" class="svg-small" transform="rotate(-90 ${Math.min(canvasW - 32, itemX + itemW + 18)} ${itemY + Math.max(16, itemH / 2)})">${fmt(builtHeight, 1, " in")} built height</text>
+    ${svgDimensionLine(itemX, topDimensionY, itemX + itemW, topDimensionY, `${fmt(itemWidth, 1, " in")} item width`)}
+    ${svgVerticalDimension(dimensionX, itemY, baseY, `${fmt(builtHeight, 1, " in")} built height`)}
   `;
 
   return `
     <svg viewBox="0 0 ${canvasW} ${canvasH}" role="img" aria-label="Hold contour image for ${laneText.toLowerCase()}">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
+          <path d="M 0 0 L 8 4 L 0 8 z" fill="#39464d"/>
+        </marker>
+      </defs>
       <rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="#ffffff"/>
       <text x="38" y="46" class="svg-label">HOLD CONTOUR</text>
       <text x="38" y="72" class="svg-value">${laneText}</text>
       <text x="38" y="98" class="svg-small">${contour.label}</text>
-      <path d="${aircraftPath}" fill="#e8ecef" stroke="#9aa4aa" stroke-width="2"/>
-      <line x1="${x0 - 32}" y1="${baseY}" x2="${x1 + 32}" y2="${baseY}" stroke="#263238" stroke-width="2"/>
+      <path d="${aircraftPath}" fill="#eef3f5" stroke="#9aa4aa" stroke-width="2.4"/>
+      <path d="${usablePath}" fill="#dfe6ea" stroke="#263238" stroke-width="2.2"/>
+      <rect x="${selectedLaneX}" y="${baseBandY}" width="${selectedLaneW}" height="${baseBandH}" fill="#c9d4db" opacity="0.95"/>
+      <line x1="${deckLeft - 32}" y1="${baseY}" x2="${deckRight + 32}" y2="${baseY}" stroke="#263238" stroke-width="2.2"/>
+      <text x="${deckLeft + sideW / 2}" y="${baseY + 28}" text-anchor="middle" class="svg-value">LEFT</text>
+      <text x="${deckRight - sideW / 2}" y="${baseY + 28}" text-anchor="middle" class="svg-value">RIGHT</text>
+      <text x="${itemCenterX}" y="${baseY + 51}" text-anchor="middle" class="svg-small">${pallet.code} / ${selectedLaneLabel} LOAD FOOTPRINT</text>
+      ${svgDimensionLine(deckLeft, deckDimensionY, deckRight, deckDimensionY, `${fmt(deckWidthIn, 0, " in")} hold width`, "bottom")}
+      ${svgVerticalDimension(deckLeft - 42, topY, baseY, `${fmt(profileHeightLimit, 0, " in")} contour height`)}
       ${cargoLayer}
       ${supportLayer}
       ${itemDimensionLayer}
@@ -1309,24 +1369,11 @@ function buildHoldContourDiagram(input, pallet, shoring, mode, contour) {
 
 function buildEngineContourShape({ cx, cy, rx, ry, fill, stroke, label }) {
   const engineLabel = label && label !== "ENGINE" ? `${label} ENGINE` : "ENGINE";
-  const inletRx = Math.max(8, rx * 0.58);
-  const inletRy = Math.max(8, ry * 0.58);
-  const hubRx = Math.max(5, rx * 0.18);
-  const hubRy = Math.max(5, ry * 0.18);
-  const bladeLines = Array.from({ length: 8 }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / 8;
-    const x2 = cx + Math.cos(angle) * inletRx * 0.82;
-    const y2 = cy + Math.sin(angle) * inletRy * 0.82;
-    return `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#6f7b82" stroke-width="1.1" opacity="0.8"/>`;
-  }).join("");
 
   return `
     <g>
       <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${stroke}" stroke-width="2.4"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="${inletRx}" ry="${inletRy}" fill="#ffffff" stroke="#66737b" stroke-width="1.7"/>
-      ${bladeLines}
-      <ellipse cx="${cx}" cy="${cy}" rx="${hubRx}" ry="${hubRy}" fill="#9aa4aa" stroke="#4b5660" stroke-width="1.2"/>
-      <text x="${cx}" y="${cy + ry + 18}" text-anchor="middle" fill="#172026" font-family="Arial" font-size="13" font-weight="700">${engineLabel}</text>
+      <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="#172026" font-family="Arial" font-size="13" font-weight="700">${engineLabel}</text>
     </g>
   `;
 }
